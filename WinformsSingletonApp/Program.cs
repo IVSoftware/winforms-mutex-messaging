@@ -12,7 +12,6 @@ namespace WinformsSingletonApp
         private static Mutex? mutex;
         private static MainForm? mainForm;
         const string MUTEX = "{5F563B29-172F-4385-B813-21062155F22E}-MUTEX";
-        const string PIPE = "{5F563B29-172F-4385-B813-21062155F22E}-PIPE";
 
         [STAThread]
         static void Main()
@@ -43,6 +42,7 @@ namespace WinformsSingletonApp
                 }
             }
         }
+        const string PIPE = "{5F563B29-172F-4385-B813-21062155F22E}-PIPE";
         private static void SendMessageToPipe(Array args)
         {
             try
