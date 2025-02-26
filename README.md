@@ -1,6 +1,8 @@
-The way you could _"handle the second scenario"_ is to launch the app "again" on (e.g. on the command line) while first instance is still running and forward the new command line arguments via named pipe. Here's what I mean.
+To have your singleton app process new command line arguments, just invoke it exactly the same way (e.g. on the command line or by using `ProcessStart`) without regard for whether the app is running or not. This way you _"handle the second scenario"_ by capturing the "new" command line arguments _before denying the new instance_" and then send those new arguments to the running instance via a named pipe.
+___
+**Here's what I mean:** If no instance is running we take the command line args and display then in the title bar so we have some way of observing what's happening. This is the result of the `if` block having successfully executed in `Main()`.
 
-Start with "no instances running". Launch the app via command line with original command line args. These are displayed in the title bar because the first block has successfully executed in `Main()`.
+`PS >> .\WinformsSingletonApp.exe orig cmd line args`
 
 [![first instance][1]][1]
 
@@ -19,7 +21,7 @@ static void Main()
         {
             try
             {
-                ListenForMessages();
+                ListenForMessages(); // Running instance is now listening to pipe.
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 int N = 0;
@@ -46,11 +48,32 @@ static void Main()
         }
     }
 }
+
+private static async void ListenForMessages()
+{
+    await Task.Run(() =>
+    {
+        while (true)
+        {
+            using (NamedPipeServerStream pipeServer = new NamedPipeServerStream(PIPE, PipeDirection.In))
+            {
+                pipeServer.WaitForConnection(); 
+                using (StreamReader reader = new StreamReader(pipeServer))
+                {
+                    if(reader.ReadToEnd() is { } json)
+                    {
+                        mainForm?.OnPipeMessage(json);
+                    }
+                }
+            }
+        }
+    });
+}
 ```
 
 ___
 
-**Launch app "again"**
+**Subsequent command line invocations**
 
 `PS .\WinformsSingletonApp.exe new args orig instance`
 
@@ -76,29 +99,7 @@ private static void SendMessageToPipe(Array args)
         MessageBox.Show($"Failed to send arguments to the main instance: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 }
-private static async void ListenForMessages()
-{
-    await Task.Run(() =>
-    {
-        while (true)
-        {
-            using (NamedPipeServerStream pipeServer = new NamedPipeServerStream(PIPE, PipeDirection.In))
-            {
-                pipeServer.WaitForConnection(); 
-                using (StreamReader reader = new StreamReader(pipeServer))
-                {
-                    if(reader.ReadToEnd() is { } json)
-                    {
-                        mainForm?.OnPipeMessage(json);
-                    }
-                }
-            }
-        }
-    });
-}
 ```
-
-
 ___
 
 For demo purposes, when the singleton app receives a message, it pops up a message box showing the arguments.
