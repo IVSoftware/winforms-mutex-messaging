@@ -1,6 +1,6 @@
 To have your singleton app process new command line arguments, just invoke it exactly the same way (e.g. on the command line or by using `ProcessStart`) without regard for whether the app is running or not. This way you _"handle the second scenario"_ by capturing the "new" command line arguments _before denying the new instance_" and then send those new arguments to the running instance via a named pipe.
 ___
-**Here's what I mean:** If no instance is running we take the command line args and display then in the title bar so we have some way of observing what's happening. This is the result of the `if` block having successfully executed in `Main()`.
+**Here's what I mean:** If no instance is running we take the command line args and display them in the title bar so we have some way of observing what's happening. This is the result of the `if` block having successfully executed in `Main()`.
 
 `PS >> .\WinformsSingletonApp.exe orig cmd line args`
 
@@ -110,16 +110,16 @@ namespace WinformsSingletonApp
     public partial class MainForm : Form
     {
         public MainForm() => InitializeComponent();
-
         public void OnPipeMessage(string json)
         {
             int N = 0;
             if(JsonConvert.DeserializeObject<JArray>(json) is { } pm)
             {
-                MessageBox.Show(
-                    string.Join(
-                        Environment.NewLine, 
-                        pm.Select(_ => $"[{N++}] {_}")));
+                var displayArgs = string.Join(Environment.NewLine, pm.Select(_ => $"[{N++}] {_}"));
+                BeginInvoke(() => MessageBox.Show(this, $"Main Form {displayArgs}"));
+                // This helps pop it up when running from CLI
+                BeginInvoke(() => TopMost = true);
+                BeginInvoke(() => TopMost = false);
             }
         }
     }

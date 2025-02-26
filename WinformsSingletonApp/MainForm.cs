@@ -7,11 +7,7 @@ namespace WinformsSingletonApp
 {
     public partial class MainForm : Form
     {
-        public MainForm()
-        {
-            InitializeComponent();
-        }
-
+        public MainForm() => InitializeComponent();
         public void OnPipeMessage(string json)
         {
             int N = 0;
