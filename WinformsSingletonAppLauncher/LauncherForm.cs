@@ -5,7 +5,9 @@ namespace WinformsSingletonAppLauncher
     public partial class LauncherForm : Form
     {
         int _autoIncrement = 0;
-        const string APP_PATH = @"D:\Github\stackoverflow\WinForms\winforms-mutex-messaging\WinformsSingletonApp\bin\Debug\net8.0-windows\WinformsSingletonApp.exe";
+        // Project-relative path.
+        const string APP_PATH = @"..\..\..\..\WinformsSingletonApp\bin\Debug\net8.0-windows\WinformsSingletonApp.exe";
+
         public LauncherForm()
         {
             InitializeComponent();
