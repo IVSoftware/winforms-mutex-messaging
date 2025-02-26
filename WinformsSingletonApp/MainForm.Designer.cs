@@ -34,7 +34,7 @@
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(478, 244);
+            ClientSize = new Size(578, 344);
             Name = "MainForm";
             Padding = new Padding(5);
             StartPosition = FormStartPosition.CenterScreen;

@@ -26,7 +26,15 @@ namespace WinformsSingletonApp
                         ListenForMessages();
                         Application.EnableVisualStyles();
                         Application.SetCompatibleTextRenderingDefault(false);
-                        mainForm = new MainForm();
+                        int N = 0;
+                        var displayArgs = string.Join(
+                            " ", 
+                            Environment.GetCommandLineArgs().Skip(1).Select(_ => $"[{N++}] {_}"));
+
+                        mainForm = new MainForm
+                        {
+                            Text = $"Main Form {displayArgs}"
+                        };
                         Application.Run(mainForm);
                     }
                     finally

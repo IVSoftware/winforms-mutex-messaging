@@ -17,7 +17,10 @@ namespace WinformsSingletonApp
             int N = 0;
             if(JsonConvert.DeserializeObject<JArray>(json) is { } pm)
             {
-                MessageBox.Show(string.Join(Environment.NewLine, pm.Select(_ => $"[{N++}] {_}")));
+                var displayArgs = string.Join(Environment.NewLine, pm.Select(_ => $"[{N++}] {_}"));
+                BeginInvoke(() => MessageBox.Show(this, $"Main Form {displayArgs}"));
+                BeginInvoke(() => TopMost = true);
+                BeginInvoke(() => TopMost = false);
             }
         }
     }

@@ -1,52 +1,103 @@
-To handle the second scenario, one simple approach is to use a named pipe. 
+The way you could _"handle the second scenario"_ is to launch the app "again" on (e.g. on the command line) while first instance is still running and forward the new command line arguments via named pipe. Here's what I mean.
+
+Start with "no instances running". Launch the app via command line with original command line args. These are displayed in the title bar because the first block has successfully executed in `Main()`.
+
+[![first instance][1]][1]
 
 ```
-internal static class Program
-{
-    .
-    .
-    .
-    const string PIPE = "{5F563B29-172F-4385-B813-21062155F22E}-PIPE";
-    private static void SendMessageToPipe(Array args)
+private static Mutex? mutex;
+private static MainForm? mainForm;
+const string MUTEX = "{5F563B29-172F-4385-B813-21062155F22E}-MUTEX";
+
+[STAThread]
+static void Main()
+{ 
+    bool createdNew;
+    using (mutex = new Mutex(true, MUTEX, out createdNew))
     {
-        try
+        if (createdNew)
         {
-            using (NamedPipeClientStream pipeClient = new NamedPipeClientStream(".", PIPE, PipeDirection.Out))
+            try
             {
-                pipeClient.Connect(timeout: TimeSpan.FromSeconds(5)); 
-                using (StreamWriter writer = new StreamWriter(pipeClient) { AutoFlush = true })
+                ListenForMessages();
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                int N = 0;
+                var displayArgs = string.Join(
+                    " ", 
+                    Environment.GetCommandLineArgs().Skip(1).Select(_ => $"[{N++}] {_}"));
+
+                mainForm = new MainForm
                 {
-                    writer.WriteLine(JsonConvert.SerializeObject(args, Formatting.Indented)); 
-                }
+                    Text = $"Main Form {displayArgs}"
+                };
+                Application.Run(mainForm);
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
             }
         }
-        catch (Exception ex)
+        else
         {
-            MessageBox.Show($"Failed to send arguments to the main instance: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            var args = Environment.GetCommandLineArgs();
+            args[0] = Path.GetFileName(args[0]);
+            SendMessageToPipe(args);
         }
-    }
-    private static async void ListenForMessages()
-    {
-        await Task.Run(() =>
-        {
-            while (true)
-            {
-                using (NamedPipeServerStream pipeServer = new NamedPipeServerStream(PIPE, PipeDirection.In))
-                {
-                    pipeServer.WaitForConnection(); 
-                    using (StreamReader reader = new StreamReader(pipeServer))
-                    {
-                        if(reader.ReadToEnd() is { } json)
-                        {
-                            mainForm?.OnPipeMessage(json);
-                        }
-                    }
-                }
-            }
-        });
     }
 }
 ```
+
+___
+
+**Launch app "again"**
+
+`PS .\WinformsSingletonApp.exe new args orig instance`
+
+The app is already running, so **this obviously doesn't actually start a new instance**. However, the "new" command line arguments are transmitted to the running instance via a named pipe. This occurs in the `else` block in `Main()`.
+
+```
+const string PIPE = "{5F563B29-172F-4385-B813-21062155F22E}-PIPE";
+private static void SendMessageToPipe(Array args)
+{
+    try
+    {
+        using (NamedPipeClientStream pipeClient = new NamedPipeClientStream(".", PIPE, PipeDirection.Out))
+        {
+            pipeClient.Connect(timeout: TimeSpan.FromSeconds(5)); 
+            using (StreamWriter writer = new StreamWriter(pipeClient) { AutoFlush = true })
+            {
+                writer.WriteLine(JsonConvert.SerializeObject(args, Formatting.Indented)); 
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Failed to send arguments to the main instance: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
+private static async void ListenForMessages()
+{
+    await Task.Run(() =>
+    {
+        while (true)
+        {
+            using (NamedPipeServerStream pipeServer = new NamedPipeServerStream(PIPE, PipeDirection.In))
+            {
+                pipeServer.WaitForConnection(); 
+                using (StreamReader reader = new StreamReader(pipeServer))
+                {
+                    if(reader.ReadToEnd() is { } json)
+                    {
+                        mainForm?.OnPipeMessage(json);
+                    }
+                }
+            }
+        }
+    });
+}
+```
+
 
 ___
 
@@ -75,79 +126,8 @@ namespace WinformsSingletonApp
 ```
 ___
 
-**Mutex**
-
-Keep handling the Mutex the same way, only now push a message into the pipe when the mutex can't be created.
-
-```
-internal static class Program
-{
-    private static Mutex? mutex;
-    private static MainForm? mainForm;
-    const string MUTEX = "{5F563B29-172F-4385-B813-21062155F22E}-MUTEX";
-
-    [STAThread]
-    static void Main()
-    { 
-        bool createdNew;
-        using (mutex = new Mutex(true, MUTEX, out createdNew))
-        {
-            if (createdNew)
-            {
-                try
-                {
-                    ListenForMessages();
-                    Application.EnableVisualStyles();
-                    Application.SetCompatibleTextRenderingDefault(false);
-                    mainForm = new MainForm();
-                    Application.Run(mainForm);
-                }
-                finally
-                {
-                    mutex.ReleaseMutex();
-                }
-            }
-            else
-            {
-                var args = Environment.GetCommandLineArgs();
-                args[0] = Path.GetFileName(args[0]);
-                SendMessageToPipe(args);
-            }
-        }
-    }
-    .
-    .
-    .
-}
-```
-___
-
-**Testing**
-
-What I've done for testing purposes is make a second winforms app that invokes the `.exe` of the first.
-
-```
-public partial class LauncherForm : Form
-{
-    int _autoIncrement = 0;
-    const string APP_PATH = @"D:\Github\stackoverflow\WinForms\winforms-mutex-messaging\WinformsSingletonApp\bin\Debug\net8.0-windows\WinformsSingletonApp.exe";
-    public LauncherForm()
-    {
-        InitializeComponent();
-        buttonLaunch.Click += (sender, e) =>
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                UseShellExecute = true,
-                FileName = APP_PATH,
-                Arguments = $"{DateTimeOffset.Now.ToString("yyyy-MM-ddTHH:mm:ssK")} {_autoIncrement++}"
-            });
-        };
-    }
-}
-```
-
-[![demo][1]][1]
+[![new args received][2]][2]
 
 
-  [1]: https://i.sstatic.net/KnHqSiDG.png
+  [1]: https://i.sstatic.net/kEJ7KoEb.png
+  [2]: https://i.sstatic.net/6HGrxLcB.png
