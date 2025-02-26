@@ -3,12 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35806.99
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinformsSingletonApp", "WinformsSingletonApp\WinformsSingletonApp.csproj", "{E1F17099-8EFC-4E90-9136-CF8E54C6DAE3}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinformsSingletonAppLauncher", "WinformsSingletonAppLauncher\WinformsSingletonAppLauncher.csproj", "{39D92067-9437-49CD-8136-6A30694D6D63}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E1F17099-8EFC-4E90-9136-CF8E54C6DAE3} = {E1F17099-8EFC-4E90-9136-CF8E54C6DAE3}
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinformsSingletonApp", "WinformsSingletonApp\WinformsSingletonApp.csproj", "{E1F17099-8EFC-4E90-9136-CF8E54C6DAE3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
